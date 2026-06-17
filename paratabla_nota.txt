@@ -1,0 +1,34 @@
+Neig = 7;
+eta = 10^-3;
+epsRange = {0, 4};
+epsStep = 0.5;
+Neps = Round[(epsRange[[2]] - epsRange[[1]])/epsStep];
+
+(*parametrització*)
+xParam[t_, eps_] := -I*(1/(1 - t^2))*Exp[(2*Pi*I*t)/(4 + eps)];
+
+res = Table[{}, {i, Neig}];
+Do[eps = epsRange[[1]] + iStep*epsStep;
+  HAM = Block[{tVar, xp, xpp, pot}, xp = D[xParam[tVar, eps], tVar];
+    xpp = D[xParam[tVar, eps], {tVar, 2}];
+    pot = (xParam[tVar, eps]^2)*(I*xParam[tVar, eps])^eps;
+    (-(1/xp^2)*D[FI[t], {t, 2}] + (xpp/xp^3)*D[FI[t], t] + 
+       pot*FI[t]) /. tVar -> t];
+  {vals, funs} = 
+   NDEigensystem[{HAM, DirichletCondition[FI[t] == 0, True]}, 
+    FI[t], {t, -1 + eta, 1 - eta}, Neig, 
+    Method -> {"PDEDiscretization" -> {"FiniteElement", {"MeshOptions" \
+-> {"MaxCellMeasure" -> 0.002}}}}];
+  sortedVals = SortBy[vals, Abs];
+  Do[AppendTo[res[[i]], {eps, Chop[sortedVals[[i]], 10^-4]}], {i, 
+    Neig}];, {iStep, 0, Neps}];
+(*traguem parts real i imaginaria*)
+dataRe = Table[Map[{#[[1]], Re[#[[2]]]} &, res[[i]]], {i, Neig}];
+dataIm = Table[Map[{#[[1]], Im[#[[2]]]} &, res[[i]]], {i, Neig}];
+TableForm[Transpose[res]]
+taula = Transpose[
+   Join[{res[[1, All, 1]]},(*epsilon*)
+    res[[All, All, 2]]       (*autovalors*)]];
+NumberForm[taula, {10, 6}]
+Grid[Map[NumberForm[#, {10, 6}] &, taula, {2}], 
+  Frame -> All] // TeXForm
